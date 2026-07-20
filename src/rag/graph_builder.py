@@ -8,8 +8,7 @@ from langchain_core.prompts import PromptTemplate
 from langgraph.constants import START, END
 from langgraph.graph.state import StateGraph
 
-from src.rag.reAct_agent import agent_executor
-from src.rag.retriever_setup import get_retriever
+from src.rag.retriever_setup import get_retriever, has_documents
 from src.config.settings import Config
 from src.llms.openai import llm, extract_text
 from src.models.grade import Grade
@@ -32,17 +31,18 @@ def query_classifier(state: State):
         dict: Updated state with route and latest_query.
     """
     question = state["messages"][-1].content
-    retriever = get_retriever()
-    context = retriever.invoke(question)
-    print("context received from retriever")
-    print(context[:500] if context else "empty")
 
-    has_real_docs = "No documents have been uploaded yet" not in context if context else False
+    has_real_docs = has_documents()
 
     if has_real_docs:
+        retriever = get_retriever()
+        context = retriever.invoke(question)
+        print("context received from retriever")
+        print(context[:500] if context else "empty")
         route = "index"
         print("Documents found, routing to index")
     else:
+        context = ""
         llm_with_structured_output = llm.with_structured_output(RouteIdentifier)
         classify_prompt = PromptTemplate(
             template=config.prompt("classify_prompt"),
@@ -75,20 +75,20 @@ def general_llm(state: State):
 
 def retriever_node(state: State):
     """
-    Retrieve results from vector stores using the reAct agent.
+    Retrieve results from vector store directly (no agent loop).
 
     Args:
         state (State): The current state of the graph.
 
     Returns:
-        dict: Updated messages with tool calls.
+        dict: Updated messages with retrieved context.
     """
     query = state["latest_query"]
-    result = agent_executor.invoke({"messages": [{"role": "user", "content": query}]})
+    retriever = get_retriever()
+    context = retriever.invoke(query)
 
-    ai_message = result["messages"][-1]
     return {
-        "messages": [AIMessage(content=ai_message.content)]
+        "messages": [AIMessage(content=context)]
     }
 
 
