@@ -1,1 +1,10 @@
-**Tool Instruction:** Use this tool to search the provided resume and answer questions based solely on its content, including work history, educational background, and professional skills.
+Here are a few ways to write this, depending on the level of formality you need:
+
+**Option 1: Direct and Concise (Recommended)**
+> "Use this tool to retrieve information from the uploaded resume. This tool is strictly limited to answering questions based on the content of the provided resume."
+
+**Option 2: Formal/System Style**
+> "This tool is a retriever for the uploaded resume. Use it exclusively to find and answer questions regarding the specific details contained within the document. Do not use this tool to answer questions unrelated to the resume's content."
+
+**Option 3: Short/Minimalist**
+> "Retrieves information from the uploaded resume. Use this tool only to answer questions about the resume content."
