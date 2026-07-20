@@ -42,6 +42,18 @@ async def rag_query(req: QueryRequest):
     return {"result": result["messages"][-1]}
 
 
+@router.get("/rag/sessions/{session_id}")
+async def get_session_messages(session_id: str):
+    """Fetch messages for a given session."""
+    try:
+        chat_history = ChatHistory.get_session_history(session_id)
+        messages = await chat_history.get_messages()
+        return {"messages": [{"role": m.type, "content": m.content} for m in messages]}
+    except Exception as e:
+        print(f"Supabase fetch error: {e}")
+        return {"messages": []}
+
+
 @router.post("/rag/documents/upload")
 async def upload_file(
     file: UploadFile = File(...),
