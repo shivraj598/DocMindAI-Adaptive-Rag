@@ -7,24 +7,10 @@ prompts:
     Be concise and accurate.
 
   classify_prompt: |
-    Question: {question}
+    Using the context below, answer concisely. If context is empty or irrelevant, use your own knowledge. If you need to search the web, say __WEB__.
+    
     Context: {context}
-    
-    Choose: "index" if context answers question, "general" if common knowledge, "search" otherwise.
-    If not "search", give a concise answer.
-    
-    Route: index
-    Answer: concise answer here
-    
-    or
-    
-    Route: general
-    Answer: concise answer here
-    
-    or
-    
-    Route: search
-    Answer: 
+    Question: {question}
 
   grading_prompt: |
     You are a grader. You are given a question and context from our indexed knowledge base.
