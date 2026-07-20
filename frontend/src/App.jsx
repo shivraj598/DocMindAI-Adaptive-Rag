@@ -147,7 +147,7 @@ function App() {
                   <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5 bg-secondary text-secondary-foreground">
                     A
                   </div>
-                  <div className="text-sm leading-relaxed pt-1 text-foreground">{m.content}</div>
+                  <div className="text-sm leading-relaxed pt-1 text-foreground whitespace-pre-wrap">{m.content}</div>
                 </div>
               )}
             </div>
