@@ -43,7 +43,7 @@ def retriever_chain(chunks: list[Document]):
 def has_documents() -> bool:
     global _vectorstore
     if _vectorstore is None:
-        return False
+        _init_vectorstore()
     return len(_vectorstore.get()["ids"]) > 0
 
 
