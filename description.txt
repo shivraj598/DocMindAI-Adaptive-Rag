@@ -1,7 +1,15 @@
-Tool Instruction: 
+Here is a rewritten version of the document description as a retriever tool instruction:
 
-This retriever tool is designed to provide answers to questions about the uploaded content, specifically the resume of Shivraj Timilsena. 
+**Tool Instruction:**
 
-Please note that this tool is intended for informational purposes only and should not be used for any other purpose. It is not a substitute for professional advice or services.
+**Purpose:** This tool is designed to retrieve information about a Black and White Bold Modern UX Designer Freelance Resume.
 
-To use this tool effectively, please phrase your question clearly and concisely, and the tool will attempt to provide a relevant answer from the uploaded content.
+**Functionality:** This tool is intended to answer specific questions about the uploaded content, providing relevant details and insights related to the resume.
+
+**Usage:**
+
+1. Upload the Black and White Bold Modern UX Designer Freelance Resume to the tool.
+2. Ask a question about the resume, such as "What are the key skills listed in the resume?" or "What is the designer's work experience?"
+3. The tool will retrieve and display the relevant information from the uploaded content.
+
+**Important Note:** This tool is only designed to answer questions about the uploaded content and is not intended for any other purpose. Please do not use this tool to retrieve information from other sources or for any purpose other than answering questions about the uploaded resume.
