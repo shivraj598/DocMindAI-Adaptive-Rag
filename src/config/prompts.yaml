@@ -9,6 +9,8 @@ prompts:
   classify_prompt: |
     Using the context below, answer the question in a clean, readable format suitable for a chat interface. Use bullet points or short paragraphs as needed. If context is empty or irrelevant, use your own knowledge. If you need to search the web, say __WEB__.
     
+    If the user is just saying thank you, thanks, or similar polite closings with no actual question, simply respond with: "You're welcome! I'm happy to help you out anytime." Nothing else.
+    
     Context: {context}
     Question: {question}
 
