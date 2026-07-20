@@ -45,6 +45,13 @@ def retriever_chain(chunks: list[Document]):
         return False
 
 
+def has_documents() -> bool:
+    global _vectorstore
+    if _vectorstore is None:
+        return False
+    return len(_vectorstore.get()["ids"]) > 0
+
+
 def get_retriever():
     global _vectorstore
 
@@ -52,17 +59,7 @@ def get_retriever():
         if _vectorstore is None:
             _init_vectorstore()
 
-        if len(_vectorstore.get()["ids"]) > 0:
-            retriever = _vectorstore.as_retriever()
-            print("Using Chroma vectorstore with uploaded documents")
-        else:
-            print("No documents uploaded yet, using dummy vectorstore")
-            dummy_doc = Document(
-                page_content="No documents have been uploaded yet. Please upload a document first.",
-                metadata={"source": "initialization"},
-            )
-            _vectorstore.add_documents([dummy_doc])
-            retriever = _vectorstore.as_retriever()
+        retriever = _vectorstore.as_retriever()
 
         if os.path.exists("description.txt"):
             with open("description.txt", "r", encoding="utf-8") as f:
@@ -70,12 +67,17 @@ def get_retriever():
         else:
             description = None
 
-        retriever_tool = create_retriever_tool(
-            retriever,
-            "retriever_customer_uploaded_documents",
-            f"Use this tool **only** to answer questions about: {description}\n"
-            "Don't use this tool to answer anything else."
-        )
+        if has_documents():
+            print("Using Chroma vectorstore with uploaded documents")
+            tool_desc = (
+                f"Use this tool ONLY to answer questions about: {description}\n"
+                "Don't use this tool to answer anything else."
+            )
+        else:
+            print("No documents uploaded yet")
+            tool_desc = "No documents have been uploaded yet. Do not use this tool."
+
+        retriever_tool = create_retriever_tool(retriever, "retriever_customer_uploaded_documents", tool_desc)
 
         return retriever_tool
 

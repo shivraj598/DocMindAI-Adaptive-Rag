@@ -1,10 +1,10 @@
-Here are a few ways to write this, depending on the level of formality you need:
+Here are a few ways to write this, depending on the level of strictness you want to impose on the AI:
 
 **Option 1: Direct and Concise (Recommended)**
-> "Use this tool to retrieve information from the uploaded resume. This tool is strictly limited to answering questions based on the content of the provided resume."
+> "Use this tool to retrieve information specifically from the resume of Shivraj Timilsena. This tool should only be used to answer questions that can be directly addressed using the content of this document."
 
-**Option 2: Formal/System Style**
-> "This tool is a retriever for the uploaded resume. Use it exclusively to find and answer questions regarding the specific details contained within the document. Do not use this tool to answer questions unrelated to the resume's content."
+**Option 2: Formal and Strict (Best for preventing "hallucinations")**
+> "This tool provides access to the resume of Shivraj Timilsena. You must use this tool exclusively to answer questions regarding the details contained within this specific document. Do not use this tool to answer general questions or queries unrelated to the uploaded content."
 
-**Option 3: Short/Minimalist**
-> "Retrieves information from the uploaded resume. Use this tool only to answer questions about the resume content."
+**Option 3: Short/System-Style (Best for API/Function calling)**
+> "Retrieves information from Shivraj Timilsena's resume. Use only for answering questions directly related to the provided document content."
