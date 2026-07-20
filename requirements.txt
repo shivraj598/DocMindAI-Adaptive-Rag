@@ -16,8 +16,7 @@ python-dotenv~=1.1.1
 PyYAML~=6.0.2
 fastapi
 uvicorn
-motor
-pymongo
+supabase
 streamlit
 requests
 langchain-qdrant

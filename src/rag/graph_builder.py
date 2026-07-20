@@ -32,27 +32,24 @@ def query_classifier(state: State):
     """
     question = state["messages"][-1].content
 
-    has_real_docs = has_documents()
-
-    if has_real_docs:
+    if has_documents():
         retriever = get_retriever()
         context = retriever.invoke(question)
         print("context received from retriever")
         print(context[:500] if context else "empty")
-        route = "index"
-        print("Documents found, routing to index")
     else:
         context = ""
-        llm_with_structured_output = llm.with_structured_output(RouteIdentifier)
-        classify_prompt = PromptTemplate(
-            template=config.prompt("classify_prompt"),
-            input_variables=["question", "context"]
-        )
-        chain = classify_prompt | llm_with_structured_output
-        result = chain.invoke({"question": question, "context": context})
-        route = result.route
-        print("result received is in query classifier")
-        print(route)
+
+    llm_with_structured_output = llm.with_structured_output(RouteIdentifier)
+    classify_prompt = PromptTemplate(
+        template=config.prompt("classify_prompt"),
+        input_variables=["question", "context"]
+    )
+    chain = classify_prompt | llm_with_structured_output
+    result = chain.invoke({"question": question, "context": context})
+    route = result.route
+    print("result received is in query classifier")
+    print(route)
 
     return {"messages": state["messages"], "route": route, "latest_query": question}
 
@@ -154,14 +151,15 @@ def generate(state: State):
         dict: Generated response.
     """
     context = state["messages"][-1].content
+    question = state["latest_query"]
 
     generate_prompt = PromptTemplate(
         template=config.prompt("generate_prompt"),
-        input_variables=["context"]
+        input_variables=["question", "context"]
     )
 
     generate_chain = generate_prompt | llm
-    result = generate_chain.invoke({"context": context})
+    result = generate_chain.invoke({"question": question, "context": context})
 
     return {"messages": [{"role": "assistant", "content": extract_text(result)}]}
 
