@@ -2,14 +2,10 @@ Here is a rewritten version of the document description as a retriever tool inst
 
 **Tool Instruction:**
 
-**Purpose:** This tool is designed to retrieve information about a Black and White Bold Modern UX Designer Freelance Resume.
+**Purpose:** This tool is designed to assist in retrieving information from uploaded content.
 
-**Functionality:** This tool is intended to answer specific questions about the uploaded content, providing relevant details and insights related to the resume.
+**Functionality:** This tool is intended to answer specific questions about the uploaded content. It is not a search engine or a general-purpose tool, but rather a focused retriever that can help you find relevant information within the uploaded content.
 
-**Usage:**
+**Usage:** To use this tool, simply upload the content you would like to query, and then enter your question or keyword in the search field. The tool will then retrieve and display relevant information from the uploaded content.
 
-1. Upload the Black and White Bold Modern UX Designer Freelance Resume to the tool.
-2. Ask a question about the resume, such as "What are the key skills listed in the resume?" or "What is the designer's work experience?"
-3. The tool will retrieve and display the relevant information from the uploaded content.
-
-**Important Note:** This tool is only designed to answer questions about the uploaded content and is not intended for any other purpose. Please do not use this tool to retrieve information from other sources or for any purpose other than answering questions about the uploaded resume.
+**Note:** This tool is not capable of providing external information or searching the internet. It is limited to retrieving information from the uploaded content only.
