@@ -15,7 +15,7 @@ if CHROMA_DIR.exists():
     shutil.rmtree(CHROMA_DIR)
     print("Cleared chroma_index on startup")
 
-app = FastAPI(title="Adaptive RAG API")
+app = FastAPI(title="DocMindAI API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,4 +32,4 @@ app.state.description_ = ""
 @app.get("/")
 async def root():
     """Root endpoint to verify API is running."""
-    return {"message": "Adaptive RAG API is running"}
+    return {"message": "DocMindAI API is running"}
