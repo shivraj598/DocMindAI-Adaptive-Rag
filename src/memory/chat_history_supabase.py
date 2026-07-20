@@ -17,6 +17,8 @@ _HEADERS = {
     "Prefer": "return=minimal",
 }
 
+_client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+
 
 class SupabaseChatMessageHistory(BaseChatMessageHistory):
     """Chat history backed by Supabase."""
@@ -25,31 +27,29 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
         self.session_id = session_id
 
     async def add_message(self, message: BaseMessage) -> None:
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                f"{SUPABASE_URL}/rest/v1/chat_history",
-                headers=_HEADERS,
-                json={
-                    "session_id": self.session_id,
-                    "type": message.type,
-                    "content": message.content,
-                    "additional_kwargs": message.additional_kwargs,
-                },
-            )
+        await _client.post(
+            f"{SUPABASE_URL}/rest/v1/chat_history",
+            headers=_HEADERS,
+            json={
+                "session_id": self.session_id,
+                "type": message.type,
+                "content": message.content,
+                "additional_kwargs": message.additional_kwargs,
+            },
+        )
 
     async def get_messages(self) -> List[BaseMessage]:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{SUPABASE_URL}/rest/v1/chat_history",
-                headers=_HEADERS,
-                params={
-                    "session_id": f"eq.{self.session_id}",
-                    "order": "timestamp.asc",
-                    "limit": 1000,
-                },
-            )
-            response.raise_for_status()
-            docs = response.json()
+        response = await _client.get(
+            f"{SUPABASE_URL}/rest/v1/chat_history",
+            headers=_HEADERS,
+            params={
+                "session_id": f"eq.{self.session_id}",
+                "order": "timestamp.asc",
+                "limit": 1000,
+            },
+        )
+        response.raise_for_status()
+        docs = response.json()
 
         return messages_from_dict(
             [
@@ -65,12 +65,11 @@ class SupabaseChatMessageHistory(BaseChatMessageHistory):
         )
 
     async def clear(self) -> None:
-        async with httpx.AsyncClient() as client:
-            await client.delete(
-                f"{SUPABASE_URL}/rest/v1/chat_history",
-                headers=_HEADERS,
-                params={"session_id": f"eq.{self.session_id}"},
-            )
+        await _client.delete(
+            f"{SUPABASE_URL}/rest/v1/chat_history",
+            headers=_HEADERS,
+            params={"session_id": f"eq.{self.session_id}"},
+        )
 
 
 class ChatHistory:
