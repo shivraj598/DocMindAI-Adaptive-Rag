@@ -24,18 +24,20 @@ async def rag_query(req: QueryRequest):
     Returns:
         The generated response from the RAG pipeline.
     """
-    chat_history = ChatHistory.get_session_history(req.session_id)
-    await chat_history.add_message(HumanMessage(content=req.query))
+    try:
+        chat_history = ChatHistory.get_session_history(req.session_id)
+        await chat_history.add_message(HumanMessage(content=req.query))
+        messages = await chat_history.get_messages()
+    except Exception as e:
+        print(f"Supabase error (continuing without history): {e}")
+        messages = [HumanMessage(content=req.query)]
 
-    # Fetch full history
-    messages = await chat_history.get_messages()
-    result = builder.invoke({
-        "messages": messages
-    })
-    output_text = result["messages"][-1].content
+    result = builder.invoke({"messages": messages})
 
-    # Save assistant message
-    await chat_history.add_message(AIMessage(content=output_text))
+    try:
+        await chat_history.add_message(AIMessage(content=result["messages"][-1].content))
+    except Exception as e:
+        print(f"Supabase save error: {e}")
 
     return {"result": result["messages"][-1]}
 
