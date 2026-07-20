@@ -10,10 +10,21 @@ prompts:
     Question: {question}
     Context: {context}
     
-    Respond in this exact format:
+    Choose: "index" if context answers question, "general" if common knowledge, "search" otherwise.
+    If not "search", give a concise answer.
     
-    Route: index|general|search
-    Answer: <concise answer if index or general, else empty>
+    Route: index
+    Answer: concise answer here
+    
+    or
+    
+    Route: general
+    Answer: concise answer here
+    
+    or
+    
+    Route: search
+    Answer: 
 
   grading_prompt: |
     You are a grader. You are given a question and context from our indexed knowledge base.
