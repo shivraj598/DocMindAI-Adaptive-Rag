@@ -7,15 +7,10 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_core.tools import create_retriever_tool
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 
-from src.core.config import settings
-
-embeddings = GoogleGenerativeAIEmbeddings(
-    model="models/gemini-embedding-001",
-    google_api_key=settings.GEMINI_API_KEY,
-)
+embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 CHROMA_DIR = Path(__file__).parent.parent.parent / "chroma_index"
 
