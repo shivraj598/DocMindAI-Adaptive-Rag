@@ -7,73 +7,62 @@ from pathlib import Path
 
 from langchain_core.documents import Document
 from langchain_core.tools import create_retriever_tool
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_community.vectorstores import Chroma
 
 from src.core.config import settings
 
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+embeddings = GoogleGenerativeAIEmbeddings(
+    model="models/gemini-embedding-001",
+    google_api_key=settings.GEMINI_API_KEY,
+)
 
-FAISS_DIR = Path(__file__).parent.parent.parent / "faiss_index"
+CHROMA_DIR = Path(__file__).parent.parent.parent / "chroma_index"
 
-_faiss_vectorstore = None
-
-
-def _load_from_disk():
-    global _faiss_vectorstore
-    index_file = FAISS_DIR / "index.faiss"
-    if index_file.exists():
-        try:
-            _faiss_vectorstore = FAISS.load_local(
-                str(FAISS_DIR), embeddings, allow_dangerous_deserialization=True
-            )
-            print(f"Loaded FAISS index from {FAISS_DIR}")
-            return True
-        except Exception as e:
-            print(f"Failed to load FAISS index: {e}")
-    return False
+_vectorstore = None
 
 
-def _save_to_disk():
-    global _faiss_vectorstore
-    if _faiss_vectorstore is not None:
-        FAISS_DIR.mkdir(parents=True, exist_ok=True)
-        _faiss_vectorstore.save_local(str(FAISS_DIR))
-        print(f"Saved FAISS index to {FAISS_DIR}")
+def _init_vectorstore():
+    global _vectorstore
+    _vectorstore = Chroma(
+        collection_name="documents",
+        embedding_function=embeddings,
+        persist_directory=str(CHROMA_DIR),
+    )
 
 
 def retriever_chain(chunks: list[Document]):
-    global _faiss_vectorstore
+    global _vectorstore
 
     try:
-        vectorstore = FAISS.from_documents(documents=chunks, embedding=embeddings)
-        _faiss_vectorstore = vectorstore
-        _save_to_disk()
-        print(f"FAISS vector store initialized with {len(chunks)} document chunks")
+        _init_vectorstore()
+        _vectorstore.add_documents(chunks)
+        _vectorstore.persist()
+        print(f"Chroma vector store updated with {len(chunks)} document chunks")
         return True
     except Exception as e:
-        print(f"Error storing documents in FAISS: {e}")
+        print(f"Error storing documents in Chroma: {e}")
         return False
 
 
 def get_retriever():
-    global _faiss_vectorstore
+    global _vectorstore
 
     try:
-        if _faiss_vectorstore is None:
-            _load_from_disk()
+        if _vectorstore is None:
+            _init_vectorstore()
 
-        if _faiss_vectorstore is not None:
-            retriever = _faiss_vectorstore.as_retriever()
-            print("Using FAISS vectorstore with uploaded documents")
+        if len(_vectorstore.get()["ids"]) > 0:
+            retriever = _vectorstore.as_retriever()
+            print("Using Chroma vectorstore with uploaded documents")
         else:
-            print("No documents uploaded yet, creating dummy vectorstore")
+            print("No documents uploaded yet, using dummy vectorstore")
             dummy_doc = Document(
                 page_content="No documents have been uploaded yet. Please upload a document first.",
                 metadata={"source": "initialization"},
             )
-            _faiss_vectorstore = FAISS.from_documents(documents=[dummy_doc], embedding=embeddings)
-            retriever = _faiss_vectorstore.as_retriever()
+            _vectorstore.add_documents([dummy_doc])
+            retriever = _vectorstore.as_retriever()
 
         if os.path.exists("description.txt"):
             with open("description.txt", "r", encoding="utf-8") as f:
