@@ -39,46 +39,25 @@ def query_classifier(state: State):
 
     result = llm.invoke(classify_prompt.format(question=question, context=context))
     text = extract_text(result)
-    print("result received is in query classifier")
-    print(text[:300])
+    print("classifier output:", text[:300])
 
-    route = "general"
-    answer = None
-    lines = text.splitlines()
-    for i, line in enumerate(lines):
-        line = line.strip()
-        if line.startswith("Route:"):
-            r = line.split(":", 1)[1].strip().lower()
-            for valid in ("index", "general", "search"):
-                if valid in r:
-                    route = valid
-                    break
-            if route != "search" and i + 1 < len(lines):
-                ans_line = lines[i + 1].strip()
-                if ans_line.startswith("Answer:"):
-                    answer = ans_line.split(":", 1)[1].strip()
-                elif ans_line and not ans_line.startswith("Route"):
-                    answer = ans_line
-                if answer == "":
-                    answer = None
+    if "__WEB__" in text:
+        route = "search"
+        answer = None
+    else:
+        route = "general"
+        answer = text
 
     new_messages = list(state["messages"])
-    if route == "index" and answer:
+    if answer:
         new_messages.append({"role": "assistant", "content": answer})
 
     return {
         "messages": new_messages,
         "route": route,
         "latest_query": question,
-        "retrieved_context": context if route == "index" else "",
+        "retrieved_context": context if route != "search" else "",
     }
-
-
-def general_llm(state: State):
-    result = llm.invoke(state["messages"])
-    print("inside general llm")
-    print(result)
-    return {"messages": result}
 
 
 def generate(state: State):
@@ -107,13 +86,11 @@ graph = StateGraph(State)
 graph.add_node("query_analysis", query_classifier)
 graph.add_node("generate", generate)
 graph.add_node("web_search", web_search)
-graph.add_node("general_llm", general_llm)
 
 graph.add_edge(START, "query_analysis")
 graph.add_conditional_edges("query_analysis", routing_tool)
 graph.add_edge("web_search", "generate")
 graph.add_edge("generate", END)
-graph.add_edge("general_llm", END)
 
 builder = graph.compile()
 builder.recursion_limit = 50
