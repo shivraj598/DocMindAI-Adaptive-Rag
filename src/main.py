@@ -2,10 +2,18 @@
 Main FastAPI application entry point.
 """
 
+import shutil
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import router
+
+CHROMA_DIR = Path(__file__).parent.parent / "chroma_index"
+if CHROMA_DIR.exists():
+    shutil.rmtree(CHROMA_DIR)
+    print("Cleared chroma_index on startup")
 
 app = FastAPI(title="Adaptive RAG API")
 
