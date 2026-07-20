@@ -1,5 +1,12 @@
 venv/
 .env
+.agents
+.claude
+.vscode/
+opencode.json
+opencode.jsonc
+
+
 faiss_index/
 chroma_index/
 __pycache__/
