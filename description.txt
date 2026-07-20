@@ -1,11 +1,3 @@
-Here is a rewritten version of the document description as a retriever tool instruction:
+Here is a rewritten tool instruction:
 
-**Tool Instruction:**
-
-**Purpose:** This tool is designed to assist in retrieving information from uploaded content.
-
-**Functionality:** This tool is intended to answer specific questions about the uploaded content. It is not a search engine or a general-purpose tool, but rather a focused retriever that can help you find relevant information within the uploaded content.
-
-**Usage:** To use this tool, simply upload the content you would like to query, and then enter your question or keyword in the search field. The tool will then retrieve and display relevant information from the uploaded content.
-
-**Note:** This tool is not capable of providing external information or searching the internet. It is limited to retrieving information from the uploaded content only.
+"Use this tool to ask questions about the uploaded resume content. This tool is only for retrieving information from the provided resume and will not return accurate results for questions about external topics or documents. Please phrase your question to retrieve specific information from the resume."
