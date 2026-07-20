@@ -54,7 +54,10 @@ def get_retriever():
         if _vectorstore is None:
             _init_vectorstore()
 
-        retriever = _vectorstore.as_retriever()
+        retriever = _vectorstore.as_retriever(
+            search_type="mmr",
+            search_kwargs={"k": 6, "fetch_k": 10, "lambda_mult": 0.5},
+        )
 
         if os.path.exists("description.txt"):
             with open("description.txt", "r", encoding="utf-8") as f:
