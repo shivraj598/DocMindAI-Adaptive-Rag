@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/context/AuthContext";
+import LoginPage from "@/components/LoginPage";
 
 const API_BASE = "http://127.0.0.1:8000";
 const STORAGE_SESSIONS = "docmind_sessions";
 const STORAGE_CURRENT = "docmind_current_session";
 
 function App() {
+  const { user, session, loading: authLoading, signOut } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,6 +27,9 @@ function App() {
   const abortRef = useRef(null);
   const progressRef = useRef(null);
   const sessionSavedRef = useRef(false);
+
+  const token = session?.access_token;
+  const authHeaders = token ? { "Authorization": `Bearer ${token}` } : {};
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -44,7 +50,7 @@ function App() {
   }, [sessions]);
 
   useEffect(() => {
-    if (messages.length > 0 && !sessionSavedRef.current) {
+    if (messages.length > 0 && !sessionSavedRef.current && user) {
       const firstUser = messages.find(m => m.role === "user");
       if (firstUser) {
         setSessions(prev => {
@@ -54,7 +60,7 @@ function App() {
         sessionSavedRef.current = true;
       }
     }
-  }, [messages, sessionId]);
+  }, [messages, sessionId, user]);
 
   const stopGeneration = () => {
     if (abortRef.current) {
@@ -65,8 +71,12 @@ function App() {
     }
   };
 
+  const handleUnauthorized = useCallback(() => {
+    signOut();
+  }, [signOut]);
+
   const sendMessage = useCallback(async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || !token) return;
     const q = input.trim();
     setInput("");
     setMessages((m) => [...m, { role: "user", content: q }]);
@@ -76,10 +86,11 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/rag/query`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ query: q, session_id: sessionId }),
         signal: abortRef.current.signal,
       });
+      if (res.status === 401) { handleUnauthorized(); return; }
       const data = await res.json();
       setMessages((m) => [...m, { role: "assistant", content: data.result?.content || "No response." }]);
     } catch (err) {
@@ -88,10 +99,10 @@ function App() {
     }
     setLoading(false);
     abortRef.current = null;
-  }, [input, sessionId]);
+  }, [input, sessionId, token, authHeaders, handleUnauthorized]);
 
   const uploadFile = useCallback(async (file) => {
-    if (!file) return;
+    if (!file || !token) return;
     const desc = file.name.replace(/\.[^/.]+$/, "");
     const fd = new FormData();
     fd.append("file", file);
@@ -106,12 +117,13 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/rag/documents/upload`, {
         method: "POST",
-        headers: { "X-Description": desc, "X-Session-Id": sessionId },
+        headers: { "X-Description": desc, "X-Session-Id": sessionId, ...authHeaders },
         body: fd,
       });
       clearInterval(progressRef.current);
       setUploadProgress(100);
       await new Promise((r) => setTimeout(r, 400));
+      if (res.status === 401) { handleUnauthorized(); return; }
       if (res.ok) {
         setMessages((m) => [...m, { role: "file", content: file.name }]);
       } else {
@@ -123,7 +135,7 @@ function App() {
     }
     setUploading(false);
     setUploadProgress(0);
-  }, [sessionId]);
+  }, [sessionId, token, authHeaders, handleUnauthorized]);
 
   const saveCurrentSession = useCallback(() => {
     if (messages.length === 0) return;
@@ -141,21 +153,22 @@ function App() {
     setMessages([]);
   };
 
-  const loadSession = async (id) => {
+  const loadSession = useCallback(async (id) => {
     if (id === sessionId) return;
     saveCurrentSession();
     setSessionId(id);
     setMessages([]);
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/rag/sessions/${id}`);
+      const res = await fetch(`${API_BASE}/rag/sessions/${id}`, { headers: authHeaders });
+      if (res.status === 401) { handleUnauthorized(); return; }
       const data = await res.json();
       setMessages(data.messages || []);
     } catch {
       setMessages([]);
     }
     setLoading(false);
-  };
+  }, [sessionId, authHeaders, handleUnauthorized, saveCurrentSession]);
 
   const deleteSession = (e, id) => {
     e.stopPropagation();
@@ -166,6 +179,22 @@ function App() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="flex gap-1 items-center">
+          <span className="w-1.5 h-1.5 rounded-full dot-pulse bg-muted-foreground" style={{ animationDelay: "0s" }} />
+          <span className="w-1.5 h-1.5 rounded-full dot-pulse bg-muted-foreground" style={{ animationDelay: "0.2s" }} />
+          <span className="w-1.5 h-1.5 rounded-full dot-pulse bg-muted-foreground" style={{ animationDelay: "0.4s" }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
     <div className="h-screen flex bg-background text-foreground">
       {/* Sidebar */}
@@ -175,7 +204,6 @@ function App() {
         } transition-all duration-300 overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground flex flex-col shrink-0`}
       >
         <div className="flex flex-col h-full min-w-64">
-          {/* Sidebar Header */}
           <div className="flex items-center justify-between px-4 h-13 border-b border-sidebar-border shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-sidebar-accent text-sidebar-accent-foreground">
@@ -185,22 +213,15 @@ function App() {
               </div>
               <span className="text-sm font-medium">DocMindAI</span>
             </div>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="p-1 rounded-md hover:bg-sidebar-accent text-sidebar-accent-foreground"
-            >
+            <button onClick={() => setSidebarOpen(false)} className="p-1 rounded-md hover:bg-sidebar-accent text-sidebar-accent-foreground">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>
             </button>
           </div>
 
-          {/* New Chat Button */}
           <div className="p-3">
-            <button
-              onClick={newChat}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-sidebar-border hover:bg-sidebar-accent transition-colors"
-            >
+            <button onClick={newChat} className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-sidebar-border hover:bg-sidebar-accent transition-colors">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
@@ -208,26 +229,14 @@ function App() {
             </button>
           </div>
 
-          {/* Sessions List */}
           <div className="flex-1 overflow-y-auto px-2 pb-2 space-y-0.5">
             {sessions.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => loadSession(s.id)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-left transition-colors group ${
-                  s.id === sessionId
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "hover:bg-sidebar-accent/50"
-                }`}
-              >
+              <button key={s.id} onClick={() => loadSession(s.id)} className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-left transition-colors group ${s.id === sessionId ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-sidebar-accent/50"}`}>
                 <svg className="w-4 h-4 shrink-0 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
                 </svg>
                 <span className="truncate flex-1">{s.title}</span>
-                <button
-                  onClick={(e) => deleteSession(e, s.id)}
-                  className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-sidebar-ring/20 transition-opacity"
-                >
+                <button onClick={(e) => deleteSession(e, s.id)} className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-sidebar-ring/20 transition-opacity">
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -235,19 +244,28 @@ function App() {
               </button>
             ))}
           </div>
+
+          <div className="border-t border-sidebar-border p-3 shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium bg-sidebar-accent text-sidebar-accent-foreground shrink-0">
+                {user.email?.[0]?.toUpperCase() || "U"}
+              </div>
+              <span className="text-xs truncate flex-1 text-sidebar-foreground">{user.email}</span>
+              <button onClick={signOut} className="p-1 rounded-md hover:bg-sidebar-accent text-sidebar-accent-foreground shrink-0" title="Sign out">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </aside>
 
-      {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <header className="flex items-center justify-between px-5 h-13 border-b shrink-0">
           <div className="flex items-center gap-3">
             {!sidebarOpen && (
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="p-1 rounded-md hover:bg-muted"
-              >
+              <button onClick={() => setSidebarOpen(true)} className="p-1 rounded-md hover:bg-muted">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                 </svg>
@@ -268,7 +286,6 @@ function App() {
           </Button>
         </header>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4">
           <div className="max-w-2xl mx-auto pt-12 pb-6 space-y-6">
             {messages.length === 0 && !loading && (
@@ -281,12 +298,10 @@ function App() {
                 <p className="text-sm text-muted-foreground">Upload a document or ask a question to get started</p>
               </div>
             )}
-              {messages.map((m, i) => (
+            {messages.map((m, i) => (
               <div key={i} className="animate-fade-in">
                 {m.role === "system" ? (
-                  <div className="text-center">
-                    <span className="text-xs text-muted-foreground">{m.content}</span>
-                  </div>
+                  <div className="text-center"><span className="text-xs text-muted-foreground">{m.content}</span></div>
                 ) : m.role === "file" ? (
                   <div className="flex gap-4">
                     <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5 bg-secondary text-secondary-foreground">
@@ -304,15 +319,11 @@ function App() {
                   </div>
                 ) : m.role === "user" ? (
                   <div className="flex justify-end">
-                    <div className="max-w-[80%] rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed bg-primary text-primary-foreground">
-                      {m.content}
-                    </div>
+                    <div className="max-w-[80%] rounded-2xl rounded-br-sm px-4 py-3 text-sm leading-relaxed bg-primary text-primary-foreground">{m.content}</div>
                   </div>
                 ) : (
                   <div className="flex gap-4">
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5 bg-secondary text-secondary-foreground">
-                      A
-                    </div>
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5 bg-secondary text-secondary-foreground">A</div>
                     <div className="text-sm leading-relaxed pt-1 text-foreground whitespace-pre-wrap">{m.content}</div>
                   </div>
                 )}
@@ -320,9 +331,7 @@ function App() {
             ))}
             {loading && (
               <div className="flex gap-4 animate-fade-in">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 bg-secondary text-secondary-foreground">
-                  A
-                </div>
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 bg-secondary text-secondary-foreground">A</div>
                 <div className="flex gap-1 items-center pt-2">
                   <span className="w-1.5 h-1.5 rounded-full dot-pulse bg-muted-foreground" style={{ animationDelay: "0s" }} />
                   <span className="w-1.5 h-1.5 rounded-full dot-pulse bg-muted-foreground" style={{ animationDelay: "0.2s" }} />
@@ -334,7 +343,6 @@ function App() {
           </div>
         </div>
 
-        {/* Upload Progress / Popup */}
         <div className="px-4 shrink-0">
           <div className="max-w-2xl mx-auto">
             {uploading && (
@@ -344,47 +352,28 @@ function App() {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
                 <span className="text-[11px] text-muted-foreground">Uploading...</span>
-                <div className="flex-1 max-w-24 ml-auto">
-                  <Progress value={uploadProgress} className="h-0.5" />
-                </div>
+                <div className="flex-1 max-w-24 ml-auto"><Progress value={uploadProgress} className="h-0.5" /></div>
                 <span className="text-[11px] tabular-nums text-muted-foreground w-6 text-right">{Math.round(uploadProgress)}%</span>
               </div>
             )}
-
           </div>
         </div>
 
-        {/* Input */}
         <div className="px-4 pb-4 pt-2 shrink-0">
           <div className="max-w-2xl mx-auto">
             <div className="flex items-end gap-2 rounded-2xl border border-input bg-card px-3 py-3 focus-within:ring-1 focus-within:ring-ring transition-shadow">
               <Button variant="ghost" size="icon" className="shrink-0 text-muted-foreground hover:text-foreground" onClick={() => fileRef.current?.click()} title="Upload document">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.5v15m7.5-7.5h-15" />
-                </svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.5v15m7.5-7.5h-15" /></svg>
               </Button>
               <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; }} className="hidden" />
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                placeholder="Ask anything..."
-                rows={1}
-                disabled={loading}
-                className="flex-1 bg-transparent text-sm outline-none resize-none py-0.5 placeholder:text-muted-foreground disabled:opacity-50"
-                onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }}
-              />
+              <textarea value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} placeholder="Ask anything..." rows={1} disabled={loading} className="flex-1 bg-transparent text-sm outline-none resize-none py-0.5 placeholder:text-muted-foreground disabled:opacity-50" onInput={(e) => { e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px"; }} />
               {loading ? (
                 <Button variant="secondary" size="icon" onClick={stopGeneration} title="Stop" className="shrink-0">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <rect x="6" y="6" width="12" height="12" rx="1" />
-                  </svg>
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1" /></svg>
                 </Button>
               ) : (
                 <Button variant="default" size="icon" onClick={sendMessage} disabled={!input.trim()} className="shrink-0">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" />
-                  </svg>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 10.5L12 3m0 0l7.5 7.5M12 3v18" /></svg>
                 </Button>
               )}
             </div>
@@ -392,7 +381,6 @@ function App() {
           </div>
         </div>
       </div>
-
     </div>
   );
 }
