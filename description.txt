@@ -1,3 +1,3 @@
 Here is a rewritten tool instruction:
 
-"Use this retriever tool to ask questions about the content of the uploaded document 'PyTorch_Complete_Course_CampusX_OCR (1)'. This tool is only for querying information within the provided document, and will not return accurate results for questions outside of its scope. Please phrase your questions to retrieve specific information from the document."
+"Use this retriever tool to ask questions about the content of the uploaded document 'FastAPI_Complete_Course_OCR'. This tool is specifically designed to provide answers based only on the information contained within this document. Please phrase your questions to retrieve relevant information from the document's content."
