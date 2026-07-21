@@ -9,5 +9,6 @@ opencode.jsonc
 
 faiss_index/
 chroma_index/
+uploads/
 __pycache__/
 *.pyc
