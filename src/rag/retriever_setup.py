@@ -40,23 +40,29 @@ def retriever_chain(chunks: list[Document]):
         return False
 
 
-def has_documents() -> bool:
+def has_documents(session_id: str = None) -> bool:
     global _vectorstore
     if _vectorstore is None:
         _init_vectorstore()
+    if session_id:
+        return len(_vectorstore.get(where={"session_id": session_id})["ids"]) > 0
     return len(_vectorstore.get()["ids"]) > 0
 
 
-def get_retriever():
+def get_retriever(session_id: str = None):
     global _vectorstore
 
     try:
         if _vectorstore is None:
             _init_vectorstore()
 
+        filter_kwargs = {}
+        if session_id:
+            filter_kwargs["filter"] = {"session_id": session_id}
+
         retriever = _vectorstore.as_retriever(
             search_type="mmr",
-            search_kwargs={"k": 6, "fetch_k": 10, "lambda_mult": 0.5},
+            search_kwargs={"k": 6, "fetch_k": 10, "lambda_mult": 0.5, **filter_kwargs},
         )
 
         if os.path.exists("description.txt"):
@@ -65,7 +71,7 @@ def get_retriever():
         else:
             description = None
 
-        if has_documents():
+        if has_documents(session_id):
             print("Using Chroma vectorstore with uploaded documents")
             tool_desc = (
                 f"Use this tool ONLY to answer questions about: {description}\n"
