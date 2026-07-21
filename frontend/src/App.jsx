@@ -12,7 +12,6 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadComplete, setUploadComplete] = useState(null);
   const [sessionId, setSessionId] = useState(() => localStorage.getItem(STORAGE_CURRENT) || crypto.randomUUID());
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sessions, setSessions] = useState(() => {
@@ -107,15 +106,14 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/rag/documents/upload`, {
         method: "POST",
-        headers: { "X-Description": desc },
+        headers: { "X-Description": desc, "X-Session-Id": sessionId },
         body: fd,
       });
       clearInterval(progressRef.current);
       setUploadProgress(100);
       await new Promise((r) => setTimeout(r, 400));
       if (res.ok) {
-        setUploadComplete(file.name);
-        setTimeout(() => setUploadComplete(null), 3000);
+        setMessages((m) => [...m, { role: "file", content: file.name }]);
       } else {
         alert(`Upload failed: ${await res.text()}`);
       }
@@ -125,7 +123,7 @@ function App() {
     }
     setUploading(false);
     setUploadProgress(0);
-  }, []);
+  }, [sessionId]);
 
   const saveCurrentSession = useCallback(() => {
     if (messages.length === 0) return;
@@ -283,11 +281,26 @@ function App() {
                 <p className="text-sm text-muted-foreground">Upload a document or ask a question to get started</p>
               </div>
             )}
-            {messages.map((m, i) => (
+              {messages.map((m, i) => (
               <div key={i} className="animate-fade-in">
                 {m.role === "system" ? (
                   <div className="text-center">
                     <span className="text-xs text-muted-foreground">{m.content}</span>
+                  </div>
+                ) : m.role === "file" ? (
+                  <div className="flex gap-4">
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium shrink-0 mt-0.5 bg-secondary text-secondary-foreground">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card text-sm max-w-[80%]">
+                      <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                      <span className="text-xs text-foreground truncate">{m.content}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">Uploaded</span>
+                    </div>
                   </div>
                 ) : m.role === "user" ? (
                   <div className="flex justify-end">
@@ -337,20 +350,7 @@ function App() {
                 <span className="text-[11px] tabular-nums text-muted-foreground w-6 text-right">{Math.round(uploadProgress)}%</span>
               </div>
             )}
-            {uploadComplete && (
-              <div
-                className="flex items-center gap-2 px-3 py-1.5 mb-2 rounded-lg border border-border bg-card animate-fade-in cursor-pointer"
-                onClick={() => setUploadComplete(null)}
-              >
-                <div className="w-4 h-4 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <svg className="w-2.5 h-2.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.5 12.75l6 6 9-13.5" />
-                  </svg>
-                </div>
-                <span className="text-[11px] text-foreground truncate">{uploadComplete}</span>
-                <span className="text-[11px] text-muted-foreground ml-auto">Uploaded</span>
-              </div>
-            )}
+
           </div>
         </div>
 
