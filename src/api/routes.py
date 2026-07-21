@@ -32,7 +32,7 @@ async def rag_query(req: QueryRequest):
         print(f"Supabase error (continuing without history): {e}")
         messages = [HumanMessage(content=req.query)]
 
-    result = builder.invoke({"messages": messages})
+    result = builder.invoke({"messages": messages, "session_id": req.session_id})
 
     try:
         await chat_history.add_message(AIMessage(content=result["messages"][-1].content))
@@ -57,7 +57,8 @@ async def get_session_messages(session_id: str):
 @router.post("/rag/documents/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    description: str = Header(..., alias="X-Description")
+    description: str = Header(..., alias="X-Description"),
+    session_id: str = Header(..., alias="X-Session-Id")
 ):
     """
     Upload a document for RAG processing.
@@ -65,10 +66,11 @@ async def upload_file(
     Args:
         file: The file to upload (PDF or TXT).
         description: Document description provided via header.
+        session_id: Session ID to scope the document to.
 
     Returns:
         Upload status.
     """
-    status_upload = documents(description, file)
+    status_upload = documents(description, session_id, file)
     return {"status": status_upload}
 
